@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ManagMe - Lab 1</title>
+    <link rel="stylesheet" href="./src/styles/main.css"> <!-- Dodajmy style -->
+  </head>
+  <body>
+    <div id="app">
+      <h1>ManagMe - Zarządzanie Projektami</h1>
+
+      <div class="user-info">
+        <!-- Tutaj w Lab 2 pojawi się info o użytkowniku -->
+      </div>
+
+      <div class="project-management">
+        <h2>Projekty</h2>
+        <form id="project-form">
+          <div>
+            <label for="project-name">Nazwa Projektu:</label>
+            <input type="text" id="project-name" name="projectName" required />
+          </div>
+          <div>
+            <label for="project-description">Opis:</label>
+            <textarea id="project-description" name="projectDescription" required></textarea>
+          </div>
+          <input type="hidden" id="project-id" name="projectId" /> <!-- Do edycji -->
+          <button type="submit">Dodaj/Zaktualizuj Projekt</button>
+        </form>
+
+        <h3>Lista Projektów:</h3>
+        <ul id="projects-list">
+          <!-- Projekty będą renderowane tutaj przez JS -->
+        </ul>
+      </div>
+
+      <div class="active-project-details">
+          <!-- Tutaj w Lab 2 pojawią się historyjki aktywnego projektu -->
+      </div>
+
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
