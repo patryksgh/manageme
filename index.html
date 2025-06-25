@@ -12,7 +12,7 @@
       <h1>ManagMe - Zarządzanie Projektami</h1>
 
       <div class="user-info">
-        <!-- Tutaj w Lab 2 pojawi się info o użytkowniku -->
+        <p>Zalogowany jako: <strong id="user-display-name"></strong></p>
       </div>
 
       <div class="project-management">
@@ -36,11 +36,36 @@
         </ul>
       </div>
 
-      <div class="active-project-details">
-          <!-- Tutaj w Lab 2 pojawią się historyjki aktywnego projektu -->
-      </div>
-
+       <div class="stories-section" id="stories-container">
+      <!-- Komunikat "Wybierz projekt" lub lista historyjek będzie tutaj -->
     </div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+
+    <div class="story-form-container" id="story-form-container" style="display: none;"> <!-- Początkowo ukryty -->
+      <h2>Dodaj/Edytuj Historyjkę</h2>
+      <form id="story-form">
+        <div>
+          <label for="story-name">Nazwa Historyjki:</label>
+          <input type="text" id="story-name" name="storyName" required />
+        </div>
+        <div>
+          <label for="story-description">Opis:</label>
+          <textarea id="story-description" name="storyDescription" required></textarea>
+        </div>
+        <div>
+          <label for="story-priority">Priorytet:</label>
+          <select id="story-priority" name="storyPriority" required>
+            <option value="low">Niski</option>
+            <option value="medium" selected>Średni</option>
+            <option value="high">Wysoki</option>
+          </select>
+        </div>
+        <!-- Stan będzie zarządzany przy tworzeniu/edycji, domyślnie 'todo' -->
+        <input type="hidden" id="story-id" name="storyId" />
+        <button type="submit">Dodaj/Zaktualizuj Historyjkę</button>
+      </form>
+    </div>
+
+  </div> <!-- Zamknięcie div#app -->
+  <script type="module" src="/src/main.ts"></script>
+</body>
 </html>
