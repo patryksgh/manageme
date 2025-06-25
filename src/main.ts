@@ -3,6 +3,7 @@ import { LocalStorageApi, AuthService } from './api/LocalStorageApi'; // Upewnij
 import { type Project } from './models/Project';
 import { type Story, type StoryPriority, type StoryStatus } from './models/Story'; // Dodaj StoryPriority i StoryStatus
 import './styles/main.css'; // Importuj style
+import { type Task, type TaskStatus } from './models/Task';
 
 // Inicjalizacja API
 const api = new LocalStorageApi();
@@ -27,6 +28,241 @@ const storyDescriptionInput = document.getElementById('story-description') as HT
 const storyPrioritySelect = document.getElementById('story-priority') as HTMLSelectElement;
 const storyIdInput = document.getElementById('story-id') as HTMLInputElement;
 
+// --- Elementy DOM dla Formularza Zadań (Modal) ---
+const taskFormModal = document.getElementById('task-form-modal') as HTMLElement;
+const closeTaskModalBtn = document.getElementById('close-task-modal-btn') as HTMLElement;
+const taskForm = document.getElementById('task-form') as HTMLFormElement;
+const taskFormTitle = document.getElementById('task-form-title') as HTMLElement;
+const taskIdInput = document.getElementById('task-id') as HTMLInputElement;
+const taskProjectIdInput = document.getElementById('task-project-id') as HTMLInputElement;
+const taskStoryIdInput = document.getElementById('task-story-id') as HTMLInputElement;
+const taskNameInput = document.getElementById('task-name') as HTMLInputElement;
+const taskDescriptionInput = document.getElementById('task-description') as HTMLTextAreaElement;
+const taskPrioritySelect = document.getElementById('task-priority') as HTMLSelectElement;
+const taskEstimatedTimeInput = document.getElementById('task-estimated-time') as HTMLInputElement;
+
+// --- Elementy DOM dla Szczegółów Zadania w Modalu ---
+const taskDetailStoryName = document.getElementById('task-detail-story-name') as HTMLElement;
+const taskDetailStatus = document.getElementById('task-detail-status') as HTMLElement;
+const taskAssigneeSelect = document.getElementById('task-assignee') as HTMLSelectElement;
+const assignTaskBtn = document.getElementById('assign-task-btn') as HTMLButtonElement;
+const taskDetailStartDate = document.getElementById('task-detail-start-date') as HTMLElement;
+const taskDetailEndDate = document.getElementById('task-detail-end-date') as HTMLElement;
+const completeTaskBtn = document.getElementById('complete-task-btn') as HTMLButtonElement;
+
+// --- Elementy DOM dla Tablicy Kanban ---
+const kanbanSection = document.getElementById('kanban-section') as HTMLElement;
+const kanbanBoard = document.getElementById('kanban-board') as HTMLElement;
+
+// Zmienna przechowująca ID edytowanego/wyświetlanego zadania w modalu
+let currentEditingTaskId: string | null = null; 
+
+// ==========================================================================
+// Funkcje związane z Modalem Zadań
+// ==========================================================================
+function openTaskModal(projectId: string, storyId: string, taskId?: string) {
+  taskForm.reset();
+  currentEditingTaskId = taskId || null;
+  taskProjectIdInput.value = projectId;
+  taskStoryIdInput.value = storyId;
+
+  const story = api.getStoryById(projectId, storyId);
+  taskDetailStoryName.textContent = story ? story.name : 'Nieznana historyjka';
+
+  // Wypełnij listę przypisywalnych użytkowników (dev, devops)
+  taskAssigneeSelect.innerHTML = '<option value="">-- Wybierz --</option>'; // Reset
+  const assignableUsers = authService.getUsersByRoles(['developer', 'devops']);
+  assignableUsers.forEach(user => {
+    const option = document.createElement('option');
+    option.value = user.id;
+    option.textContent = `${user.firstName} ${user.lastName} (${user.role})`;
+    taskAssigneeSelect.appendChild(option);
+  });
+
+  if (taskId) { // Edycja istniejącego zadania
+    taskFormTitle.textContent = 'Edytuj Zadanie';
+    const task = api.getTaskById(projectId, taskId);
+    if (task) {
+      taskIdInput.value = task.id;
+      taskNameInput.value = task.name;
+      taskDescriptionInput.value = task.description;
+      taskPrioritySelect.value = task.priority;
+      taskEstimatedTimeInput.value = task.estimatedTime.toString();
+      
+      // Wyświetl szczegóły zadania
+      taskDetailStatus.textContent = task.status;
+      taskAssigneeSelect.value = task.assignedUserId || '';
+      taskDetailStartDate.textContent = task.startDate ? new Date(task.startDate).toLocaleString() : '-';
+      taskDetailEndDate.textContent = task.endDate ? new Date(task.endDate).toLocaleString() : '-';
+
+      // Logika przycisków akcji
+      if (task.status === 'todo') {
+        taskAssigneeSelect.disabled = false;
+        assignTaskBtn.style.display = 'inline-block';
+        completeTaskBtn.style.display = 'none';
+      } else if (task.status === 'doing') {
+        taskAssigneeSelect.disabled = true; // Nie można zmienić przypisania gdy jest 'doing' przez ten interfejs
+        assignTaskBtn.style.display = 'none';
+        completeTaskBtn.style.display = 'inline-block';
+      } else { // done
+        taskAssigneeSelect.disabled = true;
+        assignTaskBtn.style.display = 'none';
+        completeTaskBtn.style.display = 'none';
+      }
+    }
+  } else { // Dodawanie nowego zadania
+    taskFormTitle.textContent = 'Dodaj Nowe Zadanie';
+    taskIdInput.value = ''; // Upewnij się, że jest puste
+    // Ukryj/resetuj pola szczegółów dla nowego zadania
+    taskDetailStatus.textContent = 'todo (nowe)';
+    taskAssigneeSelect.value = '';
+    taskAssigneeSelect.disabled = true; // Przypisanie dopiero po utworzeniu lub specjalnym przyciskiem
+    assignTaskBtn.style.display = 'none'; // Pokazać dopiero po zapisaniu zadania (lub inaczej)
+    taskDetailStartDate.textContent = '-';
+    taskDetailEndDate.textContent = '-';
+    completeTaskBtn.style.display = 'none';
+  }
+  taskFormModal.style.display = 'block';
+}
+
+function closeTaskModal() {
+  taskFormModal.style.display = 'none';
+  currentEditingTaskId = null;
+}
+
+closeTaskModalBtn.onclick = closeTaskModal;
+window.onclick = (event) => { // Zamykanie po kliknięciu poza modalem
+  if (event.target === taskFormModal) {
+    closeTaskModal();
+  }
+};
+
+taskForm.onsubmit = (event) => {
+  event.preventDefault();
+  const id = taskIdInput.value;
+  const projectId = taskProjectIdInput.value;
+  const storyId = taskStoryIdInput.value;
+
+  const taskData = {
+    name: taskNameInput.value,
+    description: taskDescriptionInput.value,
+    priority: taskPrioritySelect.value as StoryPriority,
+    storyId: storyId,
+    projectId: projectId,
+    estimatedTime: parseFloat(taskEstimatedTimeInput.value),
+  };
+
+  if (id) { // Aktualizacja
+    const existingTask = api.getTaskById(projectId, id);
+    if (existingTask) {
+      const updatedTaskData: Task = {
+        ...existingTask, // Zachowaj status, assignedUserId, daty
+        name: taskData.name,
+        description: taskData.description,
+        priority: taskData.priority,
+        estimatedTime: taskData.estimatedTime,
+      };
+      api.updateTask(updatedTaskData);
+    }
+  } else { // Zapis nowego
+    api.saveTask(taskData); // saveTask automatycznie ustawi status na 'todo'
+  }
+  closeTaskModal();
+  renderKanbanBoard(projectId); // Odśwież Kanban
+  renderStories(projectId); // Odśwież też listę historyjek (może wyświetlać liczbę zadań)
+};
+
+// Obsługa przypisywania użytkownika
+assignTaskBtn.onclick = () => {
+  if (!currentEditingTaskId || !taskProjectIdInput.value || !taskAssigneeSelect.value) return;
+  
+  const task = api.getTaskById(taskProjectIdInput.value, currentEditingTaskId);
+  const selectedUserId = taskAssigneeSelect.value;
+
+  if (task && selectedUserId) {
+    task.assignedUserId = selectedUserId;
+    task.status = 'doing'; // Automatyczna zmiana statusu
+    task.startDate = new Date().toISOString(); // Ustawienie daty startu
+    api.updateTask(task);
+    openTaskModal(task.projectId, task.storyId, task.id); // Odśwież modal
+    renderKanbanBoard(task.projectId);
+    renderStories(task.projectId);
+  }
+};
+
+// Obsługa kończenia zadania
+completeTaskBtn.onclick = () => {
+  if (!currentEditingTaskId || !taskProjectIdInput.value) return;
+
+  const task = api.getTaskById(taskProjectIdInput.value, currentEditingTaskId);
+  if (task && task.status === 'doing') {
+    task.status = 'done';
+    task.endDate = new Date().toISOString();
+    api.updateTask(task);
+    openTaskModal(task.projectId, task.storyId, task.id); // Odśwież modal
+    renderKanbanBoard(task.projectId);
+    renderStories(task.projectId);
+  }
+};
+
+
+// ==========================================================================
+// Funkcje związane z Tablicą Kanban
+// ==========================================================================
+function renderKanbanBoard(projectId: string | null) {
+  kanbanBoard.innerHTML = ''; // Wyczyść tablicę
+  if (!projectId) {
+    kanbanSection.style.display = 'none';
+    return;
+  }
+  kanbanSection.style.display = 'block';
+  const tasks = api.getTasks(projectId);
+
+  const todoTasks = tasks.filter(t => t.status === 'todo');
+  const doingTasks = tasks.filter(t => t.status === 'doing');
+  const doneTasks = tasks.filter(t => t.status === 'done');
+
+  kanbanBoard.appendChild(createKanbanColumn('Zadania: Do Zrobienia', todoTasks, projectId, 'todo'));
+  kanbanBoard.appendChild(createKanbanColumn('Zadania: W Trakcie', doingTasks, projectId, 'doing'));
+  kanbanBoard.appendChild(createKanbanColumn('Zadania: Ukończone', doneTasks, projectId, 'done'));
+}
+
+function createKanbanColumn(title: string, tasks: Task[], projectId: string, _status: TaskStatus): HTMLElement {
+  const columnDiv = document.createElement('div');
+  columnDiv.classList.add('story-column'); // Reużywamy stylów kolumn historyjek
+  columnDiv.innerHTML = `<h3>${title} (${tasks.length})</h3>`;
+  const ul = document.createElement('ul');
+
+  if (tasks.length === 0) {
+    ul.innerHTML = '<li>Brak zadań.</li>';
+  } else {
+    tasks.forEach(task => {
+      const li = document.createElement('li');
+      li.classList.add('task-item'); // Nowa klasa dla zadań
+      li.dataset.id = task.id;
+      // Kliknięcie na zadanie otwiera modal do edycji/szczegółów
+      li.onclick = () => openTaskModal(projectId, task.storyId, task.id);
+
+
+      const story = api.getStoryById(projectId, task.storyId);
+      const assignedUser = task.assignedUserId ? authService.getUserById(task.assignedUserId) : null;
+
+      li.innerHTML = `
+        <h4>${task.name}</h4>
+        <p><small>Historyjka: ${story ? story.name : 'N/A'}</small></p>
+        <p><small>Priorytet: ${task.priority}</small></p>
+        <p><small>Czas: ${task.estimatedTime}h</small></p>
+        ${assignedUser ? `<p><small>Przypisany: ${assignedUser.firstName} ${assignedUser.lastName}</small></p>` : ''}
+        <div class="actions">
+            <!-- Można dodać przyciski szybkiej zmiany statusu bezpośrednio na tablicy -->
+        </div>
+      `;
+      ul.appendChild(li);
+    });
+  }
+  columnDiv.appendChild(ul);
+  return columnDiv;
+}
 
 // ==========================================================================
 // Funkcje związane z Użytkownikiem
@@ -101,7 +337,7 @@ function renderProjects() {
     li.appendChild(projectInfoDiv);
     li.appendChild(actionsDiv);
     projectsListUl.appendChild(li);
-  });
+  })
 }
 
 function loadProjectForEditing(id: string) {
@@ -157,11 +393,12 @@ projectForm.onsubmit = (event) => {
 
 function selectActiveProject(projectId: string) {
   api.setActiveProjectId(projectId);
-  renderProjects(); // Prerenderuj, aby podświetlić
-  storyFormContainer.style.display = 'block'; // Pokaż formularz historyjek
-  renderStories(projectId); // Wyrenderuj historyjki
-  storyForm.reset(); // Wyczyść formularz historyjek
-  storyIdInput.value = ''; // Wyczyść ID historyjki na formularzu
+  renderProjects();
+  storyFormContainer.style.display = 'block';
+  renderStories(projectId);
+  renderKanbanBoard(projectId); // Dodaj renderowanie Kanbanu po wybraniu projektu
+  storyForm.reset();
+  storyIdInput.value = '';
 }
 
 // ==========================================================================
@@ -191,7 +428,7 @@ function renderStories(projectId: string | null) {
   storiesContainer.appendChild(columnsDiv);
 }
 
-function createStoryColumn(title: string, stories: Story[], projectId: string): HTMLElement {
+function createStoryColumn(title: string, stories: Story[], projectId: string): HTMLElement { // <-- W tej funkcji z Lab2
   const columnDiv = document.createElement('div');
   columnDiv.classList.add('story-column');
   columnDiv.innerHTML = `<h3>${title} (${stories.length})</h3>`;
@@ -211,20 +448,26 @@ function createStoryColumn(title: string, stories: Story[], projectId: string): 
           case 'medium': priorityText = 'Średni'; break;
           case 'high': priorityText = 'Wysoki'; break;
       }
-
-      // Proste pobranie imienia i nazwiska właściciela (mock)
-      const owner = authService.getMockedUser(); // Zakładamy, że mock user jest właścicielem wszystkich story
+      const owner = authService.getUserById(story.ownerId);
       const ownerName = owner ? `${owner.firstName} ${owner.lastName}` : 'Nieznany';
+
+      // Zlicz zadania dla tej historyjki
+      const tasksForStory = api.getTasksByStoryId(projectId, story.id);
+      const tasksCount = tasksForStory.length;
+      const doneTasksCount = tasksForStory.filter(t => t.status === 'done').length;
+
 
       li.innerHTML = `
         <h4>${story.name}</h4>
         <p>${story.description}</p>
         <p><small>Priorytet: ${priorityText}</small></p>
-        <p><small>Właściciel: ${ownerName} (ID: ${story.ownerId})</small></p>
+        <p><small>Właściciel: ${ownerName}</small></p>
+        <p><small>Zadania: ${doneTasksCount}/${tasksCount}</small></p> <!-- Licznik zadań -->
         <p><small>Utworzono: ${new Date(story.createdAt).toLocaleDateString()}</small></p>
         <div class="actions">
-          <button class="edit-story">Edytuj</button>
-          <button class="delete-story">Usuń</button>
+          <button class="edit-story">Edytuj Hist.</button>
+          <button class="delete-story">Usuń Hist.</button>
+          <button class="add-task-to-story-btn">Dodaj Zadanie</button> <!-- NOWY PRZYCISK -->
           ${story.status !== 'todo' ? `<button class="move-story" data-status="todo">Do Todo</button>` : ''}
           ${story.status !== 'doing' ? `<button class="move-story" data-status="doing">Do Doing</button>` : ''}
           ${story.status !== 'done' ? `<button class="move-story" data-status="done">Do Done</button>` : ''}
@@ -232,7 +475,11 @@ function createStoryColumn(title: string, stories: Story[], projectId: string): 
       `;
       
       li.querySelector('.edit-story')?.addEventListener('click', () => loadStoryForEditing(projectId, story.id));
-      li.querySelector('.delete-story')?.addEventListener('click', () => deleteStoryFromList(projectId, story.id)); // Zmieniona nazwa, żeby nie kolidowała z deleteProject
+      li.querySelector('.delete-story')?.addEventListener('click', () => deleteStoryFromList(projectId, story.id));
+      li.querySelector('.add-task-to-story-btn')?.addEventListener('click', (e) => { // NOWA OBSŁUGA
+          e.stopPropagation(); // Aby nie wywołać kliknięcia na całym elemencie li
+          openTaskModal(projectId, story.id);
+      });
       
       li.querySelectorAll('.move-story').forEach(button => {
         button.addEventListener('click', () => {
@@ -240,7 +487,6 @@ function createStoryColumn(title: string, stories: Story[], projectId: string): 
             moveStory(projectId, story.id, newStatus);
         });
       });
-
       ul.appendChild(li);
     });
   }
@@ -334,9 +580,11 @@ function initApp() {
     if (activeProjectId) {
         storyFormContainer.style.display = 'block';
         renderStories(activeProjectId);
+        renderKanbanBoard(activeProjectId); // Renderuj Kanban przy starcie, jeśli jest aktywny projekt
     } else {
         clearStoriesView();
         storyFormContainer.style.display = 'none';
+        kanbanSection.style.display = 'none'; // Ukryj Kanban, jeśli nie ma aktywnego projektu
     }
 }
 

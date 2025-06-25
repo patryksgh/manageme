@@ -1,7 +1,8 @@
-// src/models/User.ts
+export type UserRole = 'admin' | 'devops' | 'developer';
+
 export interface User {
   id: string;
   firstName: string;
   lastName: string;
-  // W Lab 3 dodamy tutaj rolę
+  role: UserRole;
 }
