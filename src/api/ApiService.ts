@@ -1,162 +1,94 @@
-import type { Project } from "../models/Project";
-import type { Story } from "../models/Story";
-import type { Task } from "../models/Task";
-// Krok 1: Importujemy nasz nowy typ UserWithPassword
-import type { User, UserRole, UserWithPassword } from "../models/User";
+// =======================================================================
+// ===           ApiService.ts - WERSJA Z CALLBACKIEM                    ===
+// =======================================================================
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  type User as FirebaseUser 
+} from "firebase/auth";
+import { 
+  collection, 
+  doc, 
+  addDoc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  query, 
+  where,
+  writeBatch,
+  setDoc
+} from "firebase/firestore";
 
-// Ta klasa będzie teraz naszym jedynym źródłem prawdy o danych.
+import { auth, db } from "../firebase-config";
+import type { Project } from "../models/Project";
+import type { Story, StoryData } from "../models/Story";
+import type { Task, TaskData, TaskStatus } from "../models/Task";
+import type { User, UserRole } from "../models/User";
+
 export class ApiService {
-  // Symulacja bazy danych użytkowników
-  // Krok 2: Zmieniamy typ tablicy na UserWithPassword[], aby TypeScript wiedział, że pole 'password' jest dozwolone.
-  private users: UserWithPassword[] = [
-    { id: 'user-1', username: 'patryk', password: '123', firstName: 'Andrzej', lastName: 'Duda', role: 'developer' },
-    { id: 'user-2', username: 'devops', password: 'ops123', firstName: 'Anna', lastName: 'Nowak', role: 'devops' },
-    { id: 'user-3', username: 'po', password: 'owner123', firstName: 'Piotr', lastName: 'Zieliński', role: 'product-owner' }
-  ];
+  private currentUser: User | null = null;
+  public onAuthStateChangeCallback: (() => void) | null = null; // <-- NOWA WŁAŚCIWOŚĆ
 
   constructor() {
-    // Inicjalizacja, jeśli potrzebna
+    this.listenToAuthChanges();
   }
 
-  // ===== METODY AUTORYZACJI (z Lab 4) =====
-
-  async login(username: string, password: string): Promise<User> {
-    await new Promise(res => setTimeout(res, 500));
-    // Krok 3: Dodajemy jawny typ dla 'u', aby uniknąć błędu 'any'
-    const user = this.users.find((u: UserWithPassword) => u.username === username && u.password === password);
-
-    if (user) {
-      const { password, ...userToStore } = user; // To jest bezpieczne, bo 'user' jest typu UserWithPassword
-      localStorage.setItem('managme_auth_token', `fake-jwt-for-${user.id}`);
-      localStorage.setItem('managme_user', JSON.stringify(userToStore));
-      return userToStore;
-    }
-    throw new Error('Nieprawidłowa nazwa użytkownika lub hasło.');
+  private listenToAuthChanges() {
+    onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      console.log('Firebase auth state changed. User:', firebaseUser?.email); // Log do debugowania
+      if (firebaseUser) {
+        const userDoc = await this.getUserDocById(firebaseUser.uid);
+        this.currentUser = userDoc;
+      } else {
+        this.currentUser = null;
+      }
+      
+      // Po każdej zmianie stanu, wywołujemy callback, jeśli jest ustawiony
+      if (this.onAuthStateChangeCallback) {
+        console.log('Wywołuję onAuthStateChangeCallback...'); // Log do debugowania
+        this.onAuthStateChangeCallback();
+      }
+    });
   }
 
-  async logout(): Promise<void> {
-    localStorage.removeItem('managme_auth_token');
-    localStorage.removeItem('managme_user');
+  // Reszta metod pozostaje taka sama, jak w poprzedniej poprawionej wersji...
+  // (login, logout, register, etc.)
+  async login(email: string, password: string): Promise<User> {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const userDoc = await this.getUserDocById(userCredential.user.uid);
+    if (userDoc) { this.currentUser = userDoc; return userDoc; }
+    throw new Error("Nie znaleziono danych użytkownika po zalogowaniu.");
   }
-
-  isAuthenticated(): boolean {
-    return localStorage.getItem('managme_auth_token') !== null;
+  async logout(): Promise<void> { await signOut(auth); this.currentUser = null; }
+  async register(email: string, password: string, userData: { firstName: string, lastName: string, role: UserRole }): Promise<User> {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const newUser: User = { id: userCredential.user.uid, email: email, ...userData };
+    await this.setUserDoc(newUser);
+    return newUser;
   }
-
-  getCurrentUser(): User | null {
-    const userJson = localStorage.getItem('managme_user');
-    return userJson ? JSON.parse(userJson) as User : null;
-  }
-
-  // ===== METODY ZARZĄDZANIA UŻYTKOWNIKAMI (stary AuthService) =====
-  
-  getUserById(id: string): User | undefined {
-    const user = this.users.find((u: UserWithPassword) => u.id === id); // Jawny typ
-    if (!user) return undefined;
-    const { password, ...userToReturn } = user;
-    return userToReturn;
-  }
-
-  getUsersByRoles(roles: UserRole[]): User[] {
-    return this.users
-      .filter((u: UserWithPassword) => roles.includes(u.role)) // Jawny typ
-      .map((u: UserWithPassword) => { // Jawny typ
-        const { password, ...userToReturn } = u;
-        return userToReturn;
-      });
-  }
-
-  // ===== METODY ZARZĄDZANIA PROJEKTAMI, HISTORYJKAMI, ZADANIAMI (stary LocalStorageApi) =====
-
-  private getItems<T>(key: string): T[] {
-    const itemsJson = localStorage.getItem(key);
-    return itemsJson ? JSON.parse(itemsJson) : [];
-  }
-
-  private setItems<T>(key: string, items: T[]): void {
-    localStorage.setItem(key, JSON.stringify(items));
-  }
-  
-  // -- Projekty --
-  getProjects(): Project[] { return this.getItems<Project>('projects'); }
-  saveProject(projectData: { name: string, description: string }): Project {
-    const projects = this.getProjects();
-    const newProject: Project = { ...projectData, id: `proj-${Date.now()}`, createdAt: new Date().toISOString() };
-    this.setItems('projects', [...projects, newProject]);
-    return newProject;
-  }
-  getProjectById(id: string): Project | undefined { return this.getProjects().find((p: Project) => p.id === id); }
-  updateProject(updatedProject: Project): boolean {
-    let projects = this.getProjects();
-    const index = projects.findIndex((p: Project) => p.id === updatedProject.id);
-    if (index === -1) return false;
-    projects[index] = updatedProject;
-    this.setItems('projects', projects);
-    return true;
-  }
-  deleteProject(id: string): boolean {
-    let projects = this.getProjects();
-    const initialLength = projects.length;
-    projects = projects.filter((p: Project) => p.id !== id);
-    if (projects.length === initialLength) return false;
-    this.setItems('projects', projects);
-    this.setItems('stories', this.getStories().filter((s: Story) => s.projectId !== id));
-    this.setItems('tasks', this.getTasks().filter((t: Task) => t.projectId !== id));
-    if (this.getActiveProjectId() === id) localStorage.removeItem('activeProjectId');
-    return true;
-  }
-  setActiveProjectId(projectId: string): void { localStorage.setItem('activeProjectId', projectId); }
-  getActiveProjectId(): string | null { return localStorage.getItem('activeProjectId'); }
-
-  // -- Historyjki --
-  getStories(projectId?: string): Story[] {
-    const allStories = this.getItems<Story>('stories');
-    return projectId ? allStories.filter((s: Story) => s.projectId === projectId) : allStories;
-  }
-  getStoryById(projectId: string, storyId: string): Story | undefined { return this.getStories(projectId).find((s: Story) => s.id === storyId); }
-  saveStory(storyData: Omit<Story, 'id' | 'createdAt'>): Story {
-    const stories = this.getStories();
-    const newStory: Story = { ...storyData, id: `story-${Date.now()}`, createdAt: new Date().toISOString() };
-    this.setItems('stories', [...stories, newStory]);
-    return newStory;
-  }
-  updateStory(updatedStory: Story): void {
-    let stories = this.getStories();
-    const index = stories.findIndex((s: Story) => s.id === updatedStory.id);
-    if (index !== -1) {
-      stories[index] = updatedStory;
-      this.setItems('stories', stories);
-    }
-  }
-  deleteStory(projectId: string, storyId: string): boolean {
-    let stories = this.getStories();
-    const initialLength = stories.length;
-    stories = stories.filter((s: Story) => s.id !== storyId);
-    if (stories.length === initialLength) return false;
-    this.setItems('stories', stories);
-    this.setItems('tasks', this.getTasks(projectId).filter((t: Task) => t.storyId !== storyId));
-    return true;
-  }
-
-  // -- Zadania --
-  getTasks(projectId?: string): Task[] {
-    const allTasks = this.getItems<Task>('tasks');
-    return projectId ? allTasks.filter((t: Task) => t.projectId === projectId) : allTasks;
-  }
-  getTasksByStoryId(projectId: string, storyId: string): Task[] { return this.getTasks(projectId).filter((t: Task) => t.storyId === storyId); }
-  getTaskById(projectId: string, taskId: string): Task | undefined { return this.getTasks(projectId).find((t: Task) => t.id === taskId); }
-  saveTask(taskData: Omit<Task, 'id' | 'createdAt' | 'status'>): Task {
-    const tasks = this.getTasks();
-    const newTask: Task = { ...taskData, id: `task-${Date.now()}`, createdAt: new Date().toISOString(), status: 'todo' };
-    this.setItems('tasks', [...tasks, newTask]);
-    return newTask;
-  }
-  updateTask(updatedTask: Task): void {
-    let tasks = this.getTasks();
-    const index = tasks.findIndex((t: Task) => t.id === updatedTask.id);
-    if (index !== -1) {
-      tasks[index] = updatedTask;
-      this.setItems('tasks', tasks);
-    }
-  }
+  isAuthenticated(): boolean { return !!this.currentUser; }
+  getCurrentUser(): User | null { return this.currentUser; }
+  async getUserDocById(id: string): Promise<User | null> { const userRef = doc(db, "users", id); const userSnap = await getDoc(userRef); return userSnap.exists() ? userSnap.data() as User : null; }
+  async setUserDoc(user: User): Promise<void> { const userRef = doc(db, "users", user.id); await setDoc(userRef, user); }
+  async getUsersByRoles(roles: UserRole[]): Promise<User[]> { if (roles.length === 0) return []; const q = query(collection(db, "users"), where("role", "in", roles)); const querySnapshot = await getDocs(q); return querySnapshot.docs.map(doc => doc.data() as User); }
+  async getProjects(): Promise<Project[]> { const q = collection(db, "projects"); const snapshot = await getDocs(q); return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project)); }
+  async saveProject(projectData: { name: string, description: string }): Promise<Project> { const data = { ...projectData, createdAt: new Date().toISOString() }; const docRef = await addDoc(collection(db, "projects"), data); return { id: docRef.id, ...data }; }
+  async getProjectById(id: string): Promise<Project | null> { const docRef = doc(db, "projects", id); const docSnap = await getDoc(docRef); return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Project : null; }
+  async updateProject(updatedProject: Project): Promise<void> { const { id, ...data } = updatedProject; await updateDoc(doc(db, "projects", id), data as any); }
+  async deleteProject(id: string): Promise<void> { const batch = writeBatch(db); batch.delete(doc(db, "projects", id)); const storiesSnapshot = await getDocs(query(collection(db, "stories"), where("projectId", "==", id))); storiesSnapshot.forEach(doc => batch.delete(doc.ref)); const tasksSnapshot = await getDocs(query(collection(db, "tasks"), where("projectId", "==", id))); tasksSnapshot.forEach(doc => batch.delete(doc.ref)); await batch.commit(); }
+  private activeProjectId: string | null = null;
+  setActiveProjectId(projectId: string): void { this.activeProjectId = projectId; }
+  getActiveProjectId(): string | null { return this.activeProjectId; }
+  async getStories(projectId: string): Promise<Story[]> { const q = query(collection(db, "stories"), where("projectId", "==", projectId)); const snapshot = await getDocs(q); return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Story)); }
+  async getStoryById(storyId: string): Promise<Story | null> { const docRef = doc(db, "stories", storyId); const docSnap = await getDoc(docRef); return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Story : null; }
+  async saveStory(storyData: StoryData): Promise<Story> { const data = { ...storyData, createdAt: new Date().toISOString() }; const docRef = await addDoc(collection(db, "stories"), data); return { id: docRef.id, ...data }; }
+  async updateStory(updatedStory: Story): Promise<void> { const { id, ...data } = updatedStory; await updateDoc(doc(db, "stories", id), data as any); }
+  async deleteStory(storyId: string): Promise<void> { const batch = writeBatch(db); batch.delete(doc(db, "stories", storyId)); const tasksSnapshot = await getDocs(query(collection(db, "tasks"), where("storyId", "==", storyId))); tasksSnapshot.forEach(doc => batch.delete(doc.ref)); await batch.commit(); }
+  async getTasks(projectId: string): Promise<Task[]> { const q = query(collection(db, "tasks"), where("projectId", "==", projectId)); const snapshot = await getDocs(q); return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)); }
+  async getTasksByStoryId(storyId: string): Promise<Task[]> { const q = query(collection(db, "tasks"), where("storyId", "==", storyId)); const snapshot = await getDocs(q); return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task)); }
+  async getTaskById(taskId: string): Promise<Task | null> { const docRef = doc(db, "tasks", taskId); const docSnap = await getDoc(docRef); return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Task : null; }
+  async saveTask(taskData: TaskData): Promise<Task> { const data = { ...taskData, createdAt: new Date().toISOString(), status: 'todo' as TaskStatus }; const docRef = await addDoc(collection(db, "tasks"), data); return { id: docRef.id, ...data }; }
+  async updateTask(updatedTask: Task): Promise<void> { const { id, ...data } = updatedTask; await updateDoc(doc(db, "tasks", id), data as any); }
 }

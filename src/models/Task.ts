@@ -1,17 +1,22 @@
-import { type StoryPriority } from './Story'; // Zaimportuj StoryPriority, jeśli chcesz go reużyć
+import { type StoryPriority } from './Story';
 export type TaskStatus = 'todo' | 'doing' | 'done';
 
+// Ten typ reprezentuje dane, które wysyłamy do Firestore, aby utworzyć NOWE zadanie.
+// Nie zawiera `id`, `createdAt`, ani `status`, ponieważ są one generowane automatycznie.
+export type TaskData = Omit<Task, 'id' | 'createdAt' | 'status'>;
+
+// To jest pełny obiekt zadania, który odczytujemy z Firestore.
 export interface Task {
   id: string;
   name: string;
   description: string;
-  priority: StoryPriority; // Możemy reużyć typ priorytetu z historyjki
-  storyId: string;         // ID historyjki, do której przynależy zadanie
-  projectId: string;       // ID projektu (dla łatwiejszego filtrowania)
-  estimatedTime: number;   // Przewidywany czas wykonania w godzinach (np.)
-  status: TaskStatus;      // Użyj zdefiniowanego powyżej TaskStatus
-  createdAt: string;       // ISO date string
-  startDate?: string;      // ISO date string - opcjonalne, ustawiane przy przejściu do 'doing'
-  endDate?: string;        // ISO date string - opcjonalne, ustawiane przy przejściu do 'done'
-  assignedUserId?: string; // ID użytkownika odpowiedzialnego (developer lub devops)
+  priority: StoryPriority;
+  storyId: string;
+  projectId: string;
+  estimatedTime: number;
+  status: TaskStatus;
+  createdAt: string;
+  startDate?: string;
+  endDate?: string;
+  assignedUserId?: string;
 }

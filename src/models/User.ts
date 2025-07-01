@@ -1,16 +1,10 @@
-export type UserRole = 'admin' | 'devops' | 'developer' | 'product-owner';
+// src/models/User.ts
 
-// Krok 2: Tworzymy nowy, wewnętrzny typ, który ROZSZERZA typ User o pole password.
-// Będziemy go używać tylko wewnątrz ApiService.
-export interface UserWithPassword extends User {
-  password?: string; // Hasło jest opcjonalne, bo nie chcemy go zawsze przesyłać
-}
+export type UserRole = 'product-owner' | 'developer' | 'devops';
 
-// Krok 3: Główny interfejs User pozostaje bez zmian (bez hasła).
-// Tego typu będziemy używać w całej reszcie aplikacji.
 export interface User {
-  id: string;
-  username: string;
+  id: string; // To będzie teraz UID z Firebase
+  email: string; // Dodajemy to pole
   firstName: string;
   lastName: string;
   role: UserRole;

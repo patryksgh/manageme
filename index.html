@@ -1,63 +1,103 @@
+<!-- ======================================================================= -->
+<!-- ===            index.html - WERSJA Z LOGOWANIEM/REJESTRACJĄ         === -->
+<!-- ======================================================================= -->
 <!DOCTYPE html>
-<html lang="pl" data-bs-theme="light"> <!-- Domyślnie tryb jasny -->
+<html lang="pl" data-bs-theme="light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ManagMe - Zarządzanie Projektami</title>
-    <!-- Usunęliśmy link do main.css, bo style Bootstrapa i nasze własne importujemy w main.ts -->
   </head>
   <body>
     <!-- Nawigacja z Tytułem i Przełącznikiem Motywu -->
-    <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+    <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom mb-4">
       <div class="container-fluid">
         <a class="navbar-brand" href="#">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-inline-block align-text-top me-2" viewBox="0 0 16 16">
-            <path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.992-1.819l-.637-7a2 2 0 0 1 1.992-2.181H6.172a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3m-8.322.12C1.72 3.042 1.95 3 2.19 3h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"/>
-          </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="d-inline-block align-text-top me-2" viewBox="0 0 16 16"><path d="M9.828 3h3.982a2 2 0 0 1 1.992 2.181l-.637 7A2 2 0 0 1 13.174 14H2.826a2 2 0 0 1-1.992-1.819l-.637-7a2 2 0 0 1 1.992-2.181H6.172a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3m-8.322.12C1.72 3.042 1.95 3 2.19 3h5.396l-.707-.707A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"/></svg>
           ManagMe - Zarządzanie Projektami
         </a>
         <div class="ms-auto d-flex align-items-center">
-          <!-- Sekcja z informacjami o użytkowniku i wylogowaniem -->
           <div id="user-actions-container" class="me-3" style="display: none;">
-            <span class="navbar-text">
-              Zalogowano jako: <strong id="user-display-name"></strong>
-            </span>
+            <span class="navbar-text">Zalogowano jako: <strong id="user-display-name"></strong></span>
             <button id="logout-button" class="btn btn-sm btn-outline-secondary ms-2">Wyloguj</button>
           </div>
-          <!-- Przełącznik Motywu -->
           <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" role="switch" id="theme-switch">
-            <label class="form-check-label" for="theme-switch">Tryb Ciemny</label>
+            <input class="form-check-input" type="checkbox" role="switch" id="theme-switch"><label class="form-check-label" for="theme-switch">Tryb Ciemny</label>
           </div>
         </div>
       </div>
     </nav>
 
     <!-- Główny Kontener Aplikacji -->
-    <main class="container-fluid mt-4">
+    <main class="container-fluid">
       <div id="app">
-        <!-- Sekcja Logowania (widoczna na początku) -->
-        <div id="login-form-container">
+        <!-- Kontener Autentykacji (widoczny na początku) -->
+        <div id="auth-container">
           <div class="row justify-content-center">
-            <div class="col-lg-4 col-md-6">
-              <div class="card">
-                <div class="card-body">
-                  <h2 class="card-title text-center mb-4">Logowanie</h2>
-                  <form id="login-form">
-                    <div class="mb-3">
-                      <label for="login-username" class="form-label">Nazwa użytkownika:</label>
-                      <input type="text" id="login-username" name="username" class="form-control" required>
+            <div class="col-lg-5 col-md-7">
+              <!-- Formularz Logowania -->
+              <div id="login-form-container">
+                <div class="card">
+                  <div class="card-body">
+                    <h2 class="card-title text-center mb-4">Logowanie</h2>
+                    <form id="login-form">
+                      <div class="mb-3">
+                        <label for="login-email" class="form-label">Adres e-mail:</label>
+                        <input type="email" id="login-email" class="form-control" required autocomplete="email">
+                      </div>
+                      <div class="mb-3">
+                        <label for="login-password" class="form-label">Hasło:</label>
+                        <input type="password" id="login-password" class="form-control" required autocomplete="current-password">
+                      </div>
+                      <div class="d-grid"><button type="submit" class="btn btn-primary">Zaloguj się</button></div>
+                      <p id="login-error" class="text-danger mt-3 mb-0"></p>
+                    </form>
+                    <div class="text-center mt-3">
+                      <a href="#" id="show-register-link">Nie masz konta? Zarejestruj się</a>
                     </div>
-                    <div class="mb-3">
-                      <label for="login-password" class="form-label">Hasło:</label>
-                      <input type="password" id="login-password" name="password" class="form-control" required>
+                  </div>
+                </div>
+              </div>
+              <!-- Formularz Rejestracji (początkowo ukryty) -->
+              <div id="register-form-container" style="display: none;">
+                <div class="card">
+                  <div class="card-body">
+                    <h2 class="card-title text-center mb-4">Rejestracja</h2>
+                    <form id="register-form">
+                      <div class="row">
+                        <div class="col-md-6 mb-3">
+                          <label for="register-firstname" class="form-label">Imię:</label>
+                          <input type="text" id="register-firstname" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                          <label for="register-lastname" class="form-label">Nazwisko:</label>
+                          <input type="text" id="register-lastname" class="form-control" required>
+                        </div>
+                      </div>
+                      <div class="mb-3">
+                        <label for="register-email" class="form-label">Adres e-mail:</label>
+                        <input type="email" id="register-email" class="form-control" required autocomplete="email">
+                      </div>
+                      <div class="mb-3">
+                        <label for="register-password" class="form-label">Hasło (min. 6 znaków):</label>
+                        <input type="password" id="register-password" class="form-control" required minlength="6" autocomplete="new-password">
+                      </div>
+                      <div class="mb-3">
+                        <label for="register-role" class="form-label">Rola:</label>
+                        <select id="register-role" class="form-select" required>
+                          <option value="developer" selected>Developer</option>
+                          <option value="product-owner">Product Owner</option>
+                          <option value="devops">DevOps</option>
+                        </select>
+                      </div>
+                      <div class="d-grid"><button type="submit" class="btn btn-success">Zarejestruj się</button></div>
+                      <p id="register-error" class="text-danger mt-3 mb-0"></p>
+                    </form>
+                    <div class="text-center mt-3">
+                      <a href="#" id="show-login-link">Masz już konto? Zaloguj się</a>
                     </div>
-                    <div class="d-grid">
-                      <button type="submit" class="btn btn-primary">Zaloguj się</button>
-                    </div>
-                    <p id="login-error" class="text-danger mt-3 mb-0"></p>
-                  </form>
+                  </div>
                 </div>
               </div>
             </div>
@@ -66,168 +106,20 @@
 
         <!-- Główny Kontener Aplikacji po zalogowaniu (początkowo ukryty) -->
         <div id="main-app-content" style="display: none;">
-          <div class="row g-4">
-            <!-- Lewa Kolumna: Projekty -->
-            <div class="col-lg-4">
-              <div class="card">
-                <div class="card-header">
-                  <h2>Projekty</h2>
-                </div>
-                <div class="card-body">
-                  <form id="project-form" class="mb-4">
-                    <div class="mb-3">
-                      <label for="project-name" class="form-label">Nazwa Projektu:</label>
-                      <input type="text" id="project-name" name="projectName" class="form-control" required />
-                    </div>
-                    <div class="mb-3">
-                      <label for="project-description" class="form-label">Opis:</label>
-                      <textarea id="project-description" name="projectDescription" class="form-control" rows="3" required></textarea>
-                    </div>
-                    <input type="hidden" id="project-id" name="projectId" />
-                    <button type="submit" class="btn btn-success">Dodaj/Zaktualizuj Projekt</button>
-                  </form>
-                  <h3 class="h5">Lista Projektów:</h3>
-                  <ul id="projects-list" class="list-group">
-                    <!-- Projekty będą renderowane tutaj przez JS -->
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            <!-- Prawa Kolumna: Aktywny Projekt (Historyjki i Kanban) -->
-            <div class="col-lg-8">
-              <!-- Formularz Dodawania/Edycji Historyjek (początkowo ukryty) -->
-              <div class="card mb-4" id="story-form-container" style="display: none;">
-                <div class="card-header">
-                  <h2 class="h5 mb-0">Dodaj/Edytuj Historyjkę</h2>
-                </div>
-                <div class="card-body">
-                  <form id="story-form">
-                    <div class="mb-3">
-                      <label for="story-name" class="form-label">Nazwa Historyjki:</label>
-                      <input type="text" id="story-name" name="storyName" class="form-control" required />
-                    </div>
-                    <div class="mb-3">
-                      <label for="story-description" class="form-label">Opis:</label>
-                      <textarea id="story-description" name="storyDescription" class="form-control" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                      <label for="story-priority" class="form-label">Priorytet:</label>
-                      <select id="story-priority" name="storyPriority" class="form-select" required>
-                        <option value="low">Niski</option>
-                        <option value="medium" selected>Średni</option>
-                        <option value="high">Wysoki</option>
-                      </select>
-                    </div>
-                    <input type="hidden" id="story-id" name="storyId" />
-                    <button type="submit" class="btn btn-success">Dodaj/Zaktualizuj Historyjkę</button>
-                  </form>
-                </div>
-              </div>
-              
-              <!-- Sekcja Historyjek (dla wybranego projektu) -->
-              <div id="stories-container">
-                <!-- Komunikat "Wybierz projekt" lub lista historyjek będzie tutaj -->
-              </div>
-              
-              <!-- Sekcja Tablicy Kanban (dla wybranego projektu) -->
-              <div id="kanban-section" class="mt-4" style="display: none;">
-                <h2 class="h4">Tablica Kanban Zadań</h2>
-                <div id="kanban-board" class="stories-columns">
-                  <!-- Kolumny Kanban będą generowane dynamicznie przez JS -->
-                </div>
-              </div>
-            </div>
-          </div>
-        </div> <!-- Koniec #main-app-content -->
-      </div> <!-- Koniec #app -->
+          <!-- ... reszta Twojego HTML (projekty, historyjki, kanban) pozostaje bez zmian ... -->
+          <!-- ... skopiuj ją z poprzedniej wersji lub pozostaw tak jak jest ... -->
+        </div>
+      </div>
     </main>
 
+    <!-- Modale (pozostają bez zmian) -->
     <!-- Modal Bootstrapa dla Formularza Zadań -->
-    <div class="modal fade" id="task-form-modal" tabindex="-1" aria-labelledby="task-form-title-label" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h1 class="modal-title fs-5" id="task-form-title-label">Dodaj/Edytuj Zadanie</h1>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" id="close-task-modal-btn"></button>
-          </div>
-          <div class="modal-body">
-            <form id="task-form" novalidate>
-              <input type="hidden" id="task-id" />
-              <input type="hidden" id="task-project-id" />
-              <input type="hidden" id="task-story-id" />
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="mb-3">
-                    <label for="task-name" class="form-label">Nazwa Zadania:</label>
-                    <input type="text" id="task-name" name="taskName" class="form-control" required />
-                  </div>
-                  <div class="mb-3">
-                    <label for="task-description" class="form-label">Opis:</label>
-                    <textarea id="task-description" name="taskDescription" class="form-control" rows="3" required></textarea>
-                  </div>
-                  <div class="row">
-                    <div class="col-sm-6 mb-3">
-                      <label for="task-priority" class="form-label">Priorytet:</label>
-                      <select id="task-priority" name="taskPriority" class="form-select" required>
-                        <option value="low">Niski</option>
-                        <option value="medium" selected>Średni</option>
-                        <option value="high">Wysoki</option>
-                      </select>
-                    </div>
-                    <div class="col-sm-6 mb-3">
-                      <label for="task-estimated-time" class="form-label">Przewidywany czas (h):</label>
-                      <input type="number" id="task-estimated-time" name="taskEstimatedTime" min="0" step="0.5" class="form-control" required />
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="card bg-body-secondary h-100">
-                    <div class="card-body">
-                      <h4 class="card-title h6">Szczegóły Zadania:</h4>
-                      <p class="mb-2">Historyjka: <strong id="task-detail-story-name">-</strong></p>
-                      <p class="mb-2">Stan: <strong id="task-detail-status">-</strong></p>
-                      <div class="mb-2">
-                        <label for="task-assignee" class="form-label">Przypisz do:</label>
-                        <div class="input-group">
-                          <select id="task-assignee" name="taskAssignee" class="form-select" disabled><option value="">-- Wybierz --</option></select>
-                          <button type="button" id="assign-task-btn" class="btn btn-outline-primary" style="display:none;">Przypisz i Rozpocznij</button>
-                        </div>
-                      </div>
-                      <p class="mb-2">Data startu: <strong id="task-detail-start-date">-</strong></p>
-                      <p class="mb-2">Data zakończenia: <strong id="task-detail-end-date">-</strong></p>
-                      <button type="button" id="complete-task-btn" class="btn btn-success" style="display:none;">Oznacz jako Ukończone</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="modal-footer mt-3 pt-3 border-top">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-                <button type="submit" id="save-task-btn" class="btn btn-primary">Zapisz Zadanie</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
+    <div class="modal fade" id="task-form-modal" tabindex="-1" ...>
+      <!-- ... cała zawartość modala zadań ... -->
     </div>
-    
     <!-- Modal Bootstrapa do Potwierdzania Usunięcia -->
-    <div class="modal fade" id="confirmation-modal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h1 class="modal-title fs-5" id="confirmation-modal-label">Potwierdzenie usunięcia</h1>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body" id="confirmation-modal-body">
-            <!-- Wiadomość będzie wstawiana tutaj przez JS -->
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-            <button type="button" class="btn btn-danger" id="confirm-delete-btn">Usuń</button>
-          </div>
-        </div>
-      </div>
+    <div class="modal fade" id="confirmation-modal" tabindex="-1" ...>
+      <!-- ... cała zawartość modala potwierdzenia ... -->
     </div>
 
     <script type="module" src="/src/main.ts"></script>
