@@ -22,23 +22,17 @@ export class ApiService {
 
   async login(username: string, password: string): Promise<User> {
     await new Promise(res => setTimeout(res, 500));
-    console.log(`--- Krok 3: [ApiService] Weryfikuję dane... Szukam użytkownika w tablicy this.users... ---`);
-    
+    // Krok 3: Dodajemy jawny typ dla 'u', aby uniknąć błędu 'any'
     const user = this.users.find((u: UserWithPassword) => u.username === username && u.password === password);
 
-    // To jest KLUCZOWY log - powie nam, czy użytkownik został znaleziony
-    console.log('[ApiService] Wynik wyszukiwania użytkownika:', user); 
-
     if (user) {
-      const { password, ...userToStore } = user;
+      const { password, ...userToStore } = user; // To jest bezpieczne, bo 'user' jest typu UserWithPassword
       localStorage.setItem('managme_auth_token', `fake-jwt-for-${user.id}`);
       localStorage.setItem('managme_user', JSON.stringify(userToStore));
       return userToStore;
     }
-
-    console.log('[ApiService] Użytkownik nie został znaleziony. Rzucam błąd.');
     throw new Error('Nieprawidłowa nazwa użytkownika lub hasło.');
-}
+  }
 
   async logout(): Promise<void> {
     localStorage.removeItem('managme_auth_token');
