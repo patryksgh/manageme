@@ -9,7 +9,7 @@ export class ApiService {
   // Symulacja bazy danych użytkowników
   // Krok 2: Zmieniamy typ tablicy na UserWithPassword[], aby TypeScript wiedział, że pole 'password' jest dozwolone.
   private users: UserWithPassword[] = [
-    { id: 'user-1', username: 'elo', password: '123', firstName: 'Andrzej', lastName: 'Duda', role: 'developer' },
+    { id: 'user-1', username: 'patryk', password: '123', firstName: 'Andrzej', lastName: 'Duda', role: 'developer' },
     { id: 'user-2', username: 'devops', password: 'ops123', firstName: 'Anna', lastName: 'Nowak', role: 'devops' },
     { id: 'user-3', username: 'po', password: 'owner123', firstName: 'Piotr', lastName: 'Zieliński', role: 'product-owner' }
   ];

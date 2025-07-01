@@ -11,5 +11,10 @@
   "devDependencies": {
     "typescript": "~5.8.3",
     "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "@types/bootstrap": "^5.2.10",
+    "bootstrap": "^5.3.7",
+    "firebase": "^11.10.0"
   }
 }

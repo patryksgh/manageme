@@ -1,244 +1,55 @@
 body {
-  font-family: sans-serif;
-  line-height: 1.6;
-  margin: 0;
-  padding: 20px;
-  background-color: #f4f4f4;
-  color: #333;
 }
 
-#app {
-  max-width: 900px;
-  margin: auto;
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-h1, h2, h3 {
-  color: #333;
-}
-
-label {
-  display: block;
-  margin-bottom: 5px;
-}
-
-input[type="text"],
-textarea {
-  width: calc(100% - 22px);
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-
-button {
-  background: #5cb85c;
-  color: white;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 4px;
+/* Dostosowanie dla list-group, aby elementy były klikalne */
+.list-group-item-action {
   cursor: pointer;
-  margin-right: 5px;
 }
 
-button:hover {
-  background: #4cae4c;
-}
-
-button.edit {
-  background: #f0ad4e;
-}
-button.edit:hover {
-  background: #ec971f;
-}
-
-button.delete {
-  background: #d9534f;
-}
-button.delete:hover {
-  background: #c9302c;
-}
-
-
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-li.project-item {
-  background: #e9e9e9;
-  padding: 10px;
-  margin-bottom: 8px;
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.project-item div p {
-    margin: 2px 0;
-}
-
-li.project-item {
-  /* ... (istniejące style) ... */
-  cursor: pointer; /* Dodaj kursor wskazujący na klikalność */
-  transition: background-color 0.2s ease-in-out;
-}
-li.project-item:hover {
-    background-color: #dcdcdc;
-}
-
-li.project-item.active-project {
-  background-color: #a8d5ff; /* Kolor dla aktywnego projektu */
-  border-left: 5px solid #007bff;
-}
-
-.project-item-info {
-    flex-grow: 1; /* Aby info zajmowało dostępną przestrzeń */
-}
-
-.project-item-actions button {
-    margin-left: 5px; /* Dodatkowy margines dla przycisków akcji */
-}
-
-button.select {
-  background: #5bc0de;
-}
-button.select:hover {
-  background: #31b0d5;
-}
-
-/* Style dla sekcji historyjek (dodamy później pełniejsze) */
-.stories-section {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
-}
-
+/* Pozostawiamy style dla kolumn, bo to nasza własna logika layoutu */
 .stories-columns {
-  display: flex;
-  gap: 20px; /* Odstęp między kolumnami */
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem; /* Używamy jednostek rem dla lepszej skalowalności */
 }
 
-.story-column {
-  flex: 1; /* Każda kolumna zajmuje równą część przestrzeni */
-  background-color: #f9f9f9;
-  padding: 15px;
-  border-radius: 5px;
-  min-height: 200px; /* Minimalna wysokość dla lepszego wyglądu */
-}
-
+/* Stylowanie nagłówka kolumny (np. "Do Zrobienia (Todo)") */
 .story-column h3 {
-  margin-top: 0;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--bs-border-color);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
-.story-item {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  padding: 10px;
-  margin-bottom: 10px;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+/* Style dla pojedynczego elementu na liście (historyjki lub zadania) */
+.story-item, .task-item {
+  /* Wygląd kart jest teraz zarządzany przez Bootstrap.
+     Możemy tu dodać specyficzne style, np. dla Drag&Drop */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-.story-item h4 {
-  margin-top: 0;
-  margin-bottom: 5px;
-  font-size: 1.1em;
-}
-.story-item p {
-  margin-bottom: 8px;
-  font-size: 0.9em;
-}
-.story-item small {
-    display: block;
-    color: #777;
-    font-size: 0.8em;
-}
-.story-item .actions button {
-    font-size: 0.8em;
-    padding: 4px 8px;
+.story-item:hover, .task-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--bs-box-shadow-sm);
 }
 
-.task-form-modal {
-  display: none; /* Ukryty domyślnie */
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0,0,0,0.4);
+/* Przyszłościowe style dla Drag and Drop */
+.task-item {
+  cursor: grab;
 }
 
-.modal-content {
-  background-color: #fefefe;
-  margin: 10% auto;
-  padding: 20px;
-  border: 1px solid #888;
-  width: 80%;
-  max-width: 600px;
-  border-radius: 8px;
-  position: relative;
+.task-item:active {
+  cursor: grabbing;
 }
 
-.close-modal-btn {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
+/* Klasa pomocnicza do ukrywania przycisków, których nie potrzebujemy */
+.hidden-button {
+  display: none !important;
 }
 
-.close-modal-btn:hover,
-.close-modal-btn:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-#task-details-view p {
-    font-size: 0.9em;
-    margin: 5px 0;
-}
-#task-details-view strong {
-    font-weight: normal;
-    color: #555;
-}
-
-/* Kanban board specific */
-.kanban-section {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
-}
-
-.task-item { /* Styl dla pojedynczego zadania na tablicy Kanban */
-  background-color: #fff;
-  border: 1px solid #ddd;
-  padding: 10px;
-  margin-bottom: 10px;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  cursor: grab; /* Wskazówka, że można przeciągać (w przyszłości) */
-}
-.task-item h4 {
-  margin-top: 0;
-  margin-bottom: 5px;
-  font-size: 1em; /* Mniejszy niż historyjka */
-}
-.task-item p {
-  margin-bottom: 5px;
-  font-size: 0.85em;
-}
-.task-item .actions button {
-    font-size: 0.75em;
-    padding: 3px 6px;
-    margin-top: 5px;
+/* Poprawki dla przycisków wewnątrz kart historyjek */
+.story-item .actions .btn {
+  margin-right: 0.25rem;
+  margin-top: 0.5rem;
 }
