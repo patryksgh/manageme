@@ -1,5 +1,5 @@
 // =======================================================================
-// ===           ApiService.ts - WERSJA Z CALLBACKIEM                    ===
+// ===           ApiService.ts - WERSJA Z POPRAWNYM CALLBACKIEM          ===
 // =======================================================================
 import { 
   createUserWithEmailAndPassword, 
@@ -29,7 +29,8 @@ import type { User, UserRole } from "../models/User";
 
 export class ApiService {
   private currentUser: User | null = null;
-  public onAuthStateChangeCallback: (() => void) | null = null; // <-- NOWA WŁAŚCIWOŚĆ
+  // ZMIANA: Callback będzie teraz przyjmował argument `User | null`
+  public onAuthStateChangeCallback: ((user: User | null) => void) | null = null;
 
   constructor() {
     this.listenToAuthChanges();
@@ -37,37 +38,22 @@ export class ApiService {
 
   private listenToAuthChanges() {
     onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      console.log('Firebase auth state changed. User:', firebaseUser?.email); // Log do debugowania
       if (firebaseUser) {
-        const userDoc = await this.getUserDocById(firebaseUser.uid);
-        this.currentUser = userDoc;
+        this.currentUser = await this.getUserDocById(firebaseUser.uid);
       } else {
         this.currentUser = null;
       }
       
-      // Po każdej zmianie stanu, wywołujemy callback, jeśli jest ustawiony
+      // ZMIANA: Przekazujemy aktualny stan (użytkownika lub null) do callbacka
       if (this.onAuthStateChangeCallback) {
-        console.log('Wywołuję onAuthStateChangeCallback...'); // Log do debugowania
-        this.onAuthStateChangeCallback();
+        this.onAuthStateChangeCallback(this.currentUser);
       }
     });
   }
-
-  // Reszta metod pozostaje taka sama, jak w poprzedniej poprawionej wersji...
-  // (login, logout, register, etc.)
-  async login(email: string, password: string): Promise<User> {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const userDoc = await this.getUserDocById(userCredential.user.uid);
-    if (userDoc) { this.currentUser = userDoc; return userDoc; }
-    throw new Error("Nie znaleziono danych użytkownika po zalogowaniu.");
-  }
-  async logout(): Promise<void> { await signOut(auth); this.currentUser = null; }
-  async register(email: string, password: string, userData: { firstName: string, lastName: string, role: UserRole }): Promise<User> {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const newUser: User = { id: userCredential.user.uid, email: email, ...userData };
-    await this.setUserDoc(newUser);
-    return newUser;
-  }
+  // ... reszta kodu ApiService pozostaje bez zmian ...
+  async login(email: string, password: string): Promise<User> { const userCredential = await signInWithEmailAndPassword(auth, email, password); const userDoc = await this.getUserDocById(userCredential.user.uid); if (userDoc) { return userDoc; } throw new Error("Nie znaleziono danych użytkownika."); }
+  async logout(): Promise<void> { await signOut(auth); }
+  async register(email: string, password: string, userData: { firstName: string, lastName: string, role: UserRole }): Promise<User> { const userCredential = await createUserWithEmailAndPassword(auth, email, password); const newUser: User = { id: userCredential.user.uid, email: email, ...userData }; await this.setUserDoc(newUser); return newUser; }
   isAuthenticated(): boolean { return !!this.currentUser; }
   getCurrentUser(): User | null { return this.currentUser; }
   async getUserDocById(id: string): Promise<User | null> { const userRef = doc(db, "users", id); const userSnap = await getDoc(userRef); return userSnap.exists() ? userSnap.data() as User : null; }
