@@ -1,6 +1,3 @@
-// =======================================================================
-// ===           ApiService.ts - WERSJA Z getAllUsers                  ===
-// =======================================================================
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { collection, doc, addDoc, getDoc, getDocs, updateDoc, query, where, writeBatch, setDoc } from "firebase/firestore";
 import { auth, db } from "../firebase-config";
@@ -16,13 +13,15 @@ export class ApiService {
   private listenToAuthChanges() { onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => { this.currentUser = firebaseUser ? await this.getUserDocById(firebaseUser.uid) : null; if (this.onAuthStateChangeCallback) { this.onAuthStateChangeCallback(this.currentUser); } }); }
   async login(email: string, password: string): Promise<User> { const uc = await signInWithEmailAndPassword(auth, email, password); const doc = await this.getUserDocById(uc.user.uid); if (doc) return doc; throw new Error("Błąd danych."); }
   async logout(): Promise<void> { await signOut(auth); }
-  async register(email: string, password: string, userData: { firstName: string; lastName: string; role: UserRole; }): Promise<User> { const uc = await createUserWithEmailAndPassword(auth, email, password); const newUser: User = { id: uc.user.uid, email, ...userData }; await this.setUserDoc(newUser); return newUser; }
+  async register(email: string, password: string, userData: { firstName: string; lastName: string; role: UserRole; }): Promise<User> { const uc = await createUserWithEmailAndPassword(auth, email, password); 
+    const newUser: User = { id: uc.user.uid, email, ...userData }; 
+    await this.setUserDoc(newUser); 
+    return newUser; }
   isAuthenticated(): boolean { return !!this.currentUser; }
   getCurrentUser(): User | null { return this.currentUser; }
   async getUserDocById(id: string): Promise<User | null> { const ref = doc(db, "users", id); const snap = await getDoc(ref); return snap.exists() ? snap.data() as User : null; }
   async setUserDoc(user: User): Promise<void> { await setDoc(doc(db, "users", user.id), user); }
   
-  // === NOWA METODA ===
   async getAllUsers(): Promise<User[]> {
     const q = query(collection(db, "users"));
     const snapshot = await getDocs(q);

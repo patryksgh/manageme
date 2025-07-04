@@ -2,14 +2,12 @@
   cursor: pointer;
 }
 
-/* Pozostawiamy style dla kolumn, bo to nasza własna logika layoutu */
 .stories-columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem; /* Używamy jednostek rem dla lepszej skalowalności */
+  gap: 1.5rem; 
 }
 
-/* Stylowanie nagłówka kolumny (np. "Do Zrobienia (Todo)") */
 .story-column h3 {
   font-size: 1.1rem;
   font-weight: 600;
@@ -18,10 +16,7 @@
   margin-bottom: 1rem;
 }
 
-/* Style dla pojedynczego elementu na liście (historyjki lub zadania) */
 .story-item, .task-item {
-  /* Wygląd kart jest teraz zarządzany przez Bootstrap.
-     Możemy tu dodać specyficzne style, np. dla Drag&Drop */
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
@@ -30,7 +25,6 @@
   box-shadow: var(--bs-box-shadow-sm);
 }
 
-/* Przyszłościowe style dla Drag and Drop */
 .task-item {
   cursor: grab;
 }
@@ -39,12 +33,10 @@
   cursor: grabbing;
 }
 
-/* Klasa pomocnicza do ukrywania przycisków, których nie potrzebujemy */
 .hidden-button {
   display: none !important;
 }
 
-/* Poprawki dla przycisków wewnątrz kart historyjek */
 .story-item .actions .btn {
   margin-right: 0.25rem;
   margin-top: 0.5rem;
@@ -55,7 +47,6 @@
   transform: scale(1.05);
 }
 
-/* Animacja płynnego pojawiania się */
 @keyframes fade-in {
   from {
     opacity: 0;
