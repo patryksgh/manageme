@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCnX0A27XigGGG6NZTzJyKCjXOPmw9quTM",
+  apiKey: "AIzaSyAEh8OqEQafDGgW_H9JHSv03bUCG57Rji0",
   authDomain: "manageme-98709.firebaseapp.com",
   projectId: "manageme-98709",
   storageBucket: "manageme-98709.appspot.com",
