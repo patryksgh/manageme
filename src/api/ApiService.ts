@@ -1,80 +1,223 @@
-describe('ManagMe E2E Tests', () => {
-    beforeEach(() => {
-        const userEmail = 'andrzej@gmail.com';
-        const userPassword = '123123';
-        cy.session([userEmail, userPassword], () => {
-            cy.visit('/');
-            cy.get('#login-email').type(userEmail);
-            cy.get('#login-password').type(userPassword);
-            cy.get('#login-form button[type="submit"]').click();
-            cy.get('#main-app-content').should('be.visible');
-        }, { cacheAcrossSpecs: true });
-        cy.visit('/');
-    });
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    type User as FirebaseUser
+} from "firebase/auth";
+import {
+    collection,
+    doc,
+    addDoc,
+    getDoc,
+    getDocs,
+    updateDoc,
+    query,
+    where,
+    writeBatch,
+    setDoc
+} from "firebase/firestore";
+import { auth, db } from "../firebase-config";
+import type { Project } from "../models/Project";
+import type { Story, StoryData } from "../models/Story";
+import type { Task, TaskData, TaskStatus } from "../models/Task";
+import type { User, UserRole } from "../models/User";
 
-    it('should run the full CRUD cycle for projects, stories, and tasks', () => {
-        const projectName = `Testowy Projekt ${Date.now()}`;
-        const storyName = `Historyjka ${Date.now()}`;
-        const taskName = `Testowe Zadanie ${Date.now()}`;
-        const editedProjectName = `${projectName} (Edytowany)`;
-        const sanitizedProjectName = projectName.replace(/\s+/g, '-').toLowerCase();
-        const sanitizedEditedProjectName = editedProjectName.replace(/\s+/g, '-').toLowerCase();
-        const sanitizedStoryName = storyName.replace(/\s+/g, '-').toLowerCase();
+export class ApiService {
+    private currentUser: User | null = null;
+    private activeProjectId: string | null = null;
+    public onAuthStateChangeCallback: ((user: User | null) => void) | null = null;
 
-        // --- CREATE PROJECT ---
-        cy.intercept('POST', '**/google.firestore.v1.Firestore/Write/**').as('writeRequest');
-        cy.createProject(projectName, 'Opis projektu testowego.');
-        cy.wait('@writeRequest');
-        cy.get(`[data-cy="project-item-${sanitizedProjectName}"]`, { timeout: 5000 }).should('be.visible');
+    constructor() {
+        this.listenToAuthChanges();
+    }
 
-        // --- SELECT PROJECT ---
-        cy.selectProject(projectName);
-        cy.wait(200);
+    private listenToAuthChanges() {
+        onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+            if (firebaseUser) {
+                this.currentUser = await this.getUserDocById(firebaseUser.uid);
+            } else {
+                this.currentUser = null;
+            }
 
-        // --- CREATE STORY ---
-        cy.intercept('POST', '**/google.firestore.v1.Firestore/Write/**').as('writeRequest');
-        cy.createStory(storyName, 'Opis historyjki testowej.');
-        cy.wait('@writeRequest');
-        cy.get(`[data-cy="story-card-${sanitizedStoryName}"]`, { timeout: 5000 }).should('be.visible');
-        cy.wait(150);
-        
-        // --- CREATE TASK ---
-        cy.intercept('POST', '**/google.firestore.v1.Firestore/Write/**').as('writeRequest');
-        cy.wait(100);
-        cy.createTask(storyName, taskName);
-        cy.wait('@writeRequest');
-        cy.get('#kanban-board .story-column[data-status="todo"] .task-item', { timeout: 5000 }).should('have.length.at.least', 1);        
-        cy.wait(100);
-
-        // --- EDIT PROJECT ---
-        cy.get(`[data-cy="project-item-${sanitizedProjectName}"]`).within(() => {
-            cy.get('button[title="Edytuj"]').click();
+            if (this.onAuthStateChangeCallback) {
+                this.onAuthStateChangeCallback(this.currentUser);
+            }
         });
-        cy.get('#project-name').clear().type(editedProjectName);
-        cy.intercept('POST', '**/google.firestore.v1.Firestore/Write/**').as('writeRequest');
-        cy.get('#project-form button[type="submit"]').click();
-        cy.wait('@writeRequest');
-        cy.get(`[data-cy="project-item-${sanitizedEditedProjectName}"]`, { timeout: 5000 }).should('be.visible');
-        cy.get(`[data-cy="project-item-${sanitizedProjectName}"]`).should('not.exist');
+    }
+
+    // autoryzacja użytkownika
+
+    async login(email: string, password: string): Promise<User> {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const userDoc = await this.getUserDocById(userCredential.user.uid);
+
+        if (userDoc) {
+            return userDoc;
+        }
+        throw new Error("Nie znaleziono danych użytkownika po zalogowaniu.");
+    }
+
+    async logout(): Promise<void> {
+        await signOut(auth);
+    }
+
+    async register(email: string, password: string, userData: { firstName: string; lastName: string; role: UserRole; }): Promise<User> {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const newUser: User = {
+            id: userCredential.user.uid,
+            email,
+            ...userData
+        };
+        await this.setUserDoc(newUser);
+        return newUser;
+    }
+
+    isAuthenticated(): boolean {
+        return !!this.currentUser;
+    }
+
+    getCurrentUser(): User | null {
+        return this.currentUser;
+    }
+
+    async getUserDocById(id: string): Promise<User | null> {
+        const userRef = doc(db, "users", id);
+        const userSnap = await getDoc(userRef);
+        return userSnap.exists() ? (userSnap.data() as User) : null;
+    }
+
+    async setUserDoc(user: User): Promise<void> {
+        await setDoc(doc(db, "users", user.id), user);
+    }
+
+    async getAllUsers(): Promise<User[]> {
+        const usersQuery = query(collection(db, "users"));
+        const snapshot = await getDocs(usersQuery);
+        return snapshot.docs.map(doc => doc.data() as User);
+    }
+
+    // zarządzanie projektami
+
+    setActiveProjectId(projectId: string): void {
+        this.activeProjectId = projectId;
+    }
+
+    getActiveProjectId(): string | null {
+        return this.activeProjectId;
+    }
+
+    async getProjects(): Promise<Project[]> {
+        const projectsCollection = collection(db, "projects");
+        const snapshot = await getDocs(projectsCollection);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
+    }
+
+    async saveProject(data: { name: string; description: string; }): Promise<Project> {
+        const projectData = {
+            ...data,
+            createdAt: new Date().toISOString()
+        };
+        const docRef = await addDoc(collection(db, "projects"), projectData);
+        return { id: docRef.id, ...projectData };
+    }
+    
+    async getProjectById(id: string): Promise<Project | null> {
+        const projectRef = doc(db, "projects", id);
+        const snapshot = await getDoc(projectRef);
+        return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Project) : null;
+    }
+    
+    async updateProject(project: Project): Promise<void> {
+        const { id, ...data } = project;
+        await updateDoc(doc(db, "projects", id), data);
+    }
+    
+    async deleteProject(id: string): Promise<void> {
+        const batch = writeBatch(db);
         
-        // --- DELETE STORY ---
-        cy.get(`[data-cy="story-card-${sanitizedStoryName}"]`).within(() => {
-            cy.get('button[title="Usuń"]').click({ force: true });
-        });
-        cy.get('#confirmation-modal').should('be.visible');
-        cy.intercept('POST', '**/google.firestore.v1.Firestore/Write/**').as('writeRequest');
-        cy.get('#confirm-delete-btn').click();
-        cy.wait('@writeRequest');
-        cy.get(`[data-cy="story-card-${sanitizedStoryName}"]`, { timeout: 5000 }).should('not.exist');
+        batch.delete(doc(db, "projects", id));
         
-        // --- DELETE PROJECT ---
-        cy.get(`[data-cy="project-item-${sanitizedEditedProjectName}"]`).within(() => {
-            cy.get('button[title="Usuń"]').click({ force: true });
-        });
-        cy.get('#confirmation-modal').should('be.visible');
-        cy.intercept('POST', '**/google.firestore.v1.Firestore/Write/**').as('writeRequest');
-        cy.get('#confirm-delete-btn').click();
-        cy.wait('@writeRequest');
-        cy.get(`[data-cy="project-item-${sanitizedEditedProjectName}"]`, { timeout: 5000 }).should('not.exist');
-    });
-});
+        const storiesSnapshot = await getDocs(query(collection(db, "stories"), where("projectId", "==", id)));
+        storiesSnapshot.forEach(storyDoc => batch.delete(storyDoc.ref));
+        
+        const tasksSnapshot = await getDocs(query(collection(db, "tasks"), where("projectId", "==", id)));
+        tasksSnapshot.forEach(taskDoc => batch.delete(taskDoc.ref));
+        
+        await batch.commit();
+    }
+    
+    // stories
+    
+    async getStories(projectId: string): Promise<Story[]> {
+        const storiesQuery = query(collection(db, "stories"), where("projectId", "==", projectId));
+        const snapshot = await getDocs(storiesQuery);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Story));
+    }
+    
+    async getStoryById(id: string): Promise<Story | null> {
+        const storyRef = doc(db, "stories", id);
+        const snapshot = await getDoc(storyRef);
+        return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Story) : null;
+    }
+    
+    async saveStory(data: StoryData): Promise<Story> {
+        const storyData = {
+            ...data,
+            createdAt: new Date().toISOString()
+        };
+        const docRef = await addDoc(collection(db, "stories"), storyData);
+        return { id: docRef.id, ...storyData };
+    }
+    
+    async updateStory(story: Story): Promise<void> {
+        const { id, ...data } = story;
+        await updateDoc(doc(db, "stories", id), data);
+    }
+    
+    async deleteStory(id: string): Promise<void> {
+        const batch = writeBatch(db);
+        
+        batch.delete(doc(db, "stories", id));
+        
+        const tasksSnapshot = await getDocs(query(collection(db, "tasks"), where("storyId", "==", id)));
+        tasksSnapshot.forEach(taskDoc => batch.delete(taskDoc.ref));
+        
+        await batch.commit();
+    }
+    
+    // tasks
+
+    async getTasks(projectId: string): Promise<Task[]> {
+        const tasksQuery = query(collection(db, "tasks"), where("projectId", "==", projectId));
+        const snapshot = await getDocs(tasksQuery);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+    }
+
+    async getTasksByStoryId(storyId: string): Promise<Task[]> {
+        const tasksQuery = query(collection(db, "tasks"), where("storyId", "==", storyId));
+        const snapshot = await getDocs(tasksQuery);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+    }
+    
+    async getTaskById(id: string): Promise<Task | null> {
+        const taskRef = doc(db, "tasks", id);
+        const snapshot = await getDoc(taskRef);
+        return snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Task) : null;
+    }
+    
+    async saveTask(data: TaskData): Promise<Task> {
+        const taskData = {
+            ...data,
+            createdAt: new Date().toISOString(),
+            status: 'todo' as TaskStatus,
+        };
+        const docRef = await addDoc(collection(db, "tasks"), taskData);
+        return { id: docRef.id, ...taskData };
+    }
+    
+    async updateTask(task: Task): Promise<void> {
+        const { id, ...data } = task;
+        await updateDoc(doc(db, "tasks", id), data);
+    }
+}
