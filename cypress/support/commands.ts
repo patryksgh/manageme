@@ -21,8 +21,8 @@ Cypress.Commands.add('selectProject', (name) => {
 
 Cypress.Commands.add('createStory', (name, description) => {
     cy.get('#story-form-container').should('be.visible');
-    cy.get('#story-name').should('be.visible').and('be.enabled').clear().type(name, { delay: 100 });
-    cy.get('#story-description').should('be.visible').and('be.enabled').clear().type(description, { delay: 100 });
+    cy.get('#story-name').should('be.visible').and('be.enabled').clear().type(name, { delay: 60 });
+    cy.get('#story-description').should('be.visible').and('be.enabled').clear().type(description, { delay: 60 });
     cy.get('#story-form button[type="submit"]').click();
 });
 

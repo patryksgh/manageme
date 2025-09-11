@@ -16,8 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let onConfirmDelete: (() => void) | null, currentEditingTaskId: string | null;
 
 
-    // REFERENCJE DO ELEMENTÓW DOM
-
     // Sekcja Uwierzytelniania
     const authContainer = document.getElementById('auth-container')!;
     const loginFormContainer = document.getElementById('login-form-container')!;
@@ -115,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         storyIdInput.value = '';
     }
 
-    // Otwiera i przygotowuje modal do tworzenia lub edycji zadania.
+    // Otwiera i przygotowuje modal do tworzenia lub edycji zadania
 
     async function openTaskModal(projectId: string, storyId: string, taskId?: string) {
         taskForm.reset();
@@ -164,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskModalInstance?.show();
     }
 
-    // Renderuje listę projektów.
+    // Listę projektów
 
     async function renderProjects() {
         if (!projectsListUl) return;
@@ -209,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
   
-    // Renderuje widok z historyjkami dla danego projektu.
+    // Kanaban historyjki
 
     async function renderStories(projectId: string | null) {
         if (!storiesContainer) return;
@@ -222,13 +220,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const stories = await apiService.getStories(projectId);
             storiesContainer.innerHTML = '';
             const todoStories = stories.filter((s: Story) => s.status === 'todo');
-            const doingStories = stories.filter((s: Story) => s.status === 'doing');
-            const doneStories = stories.filter((s: Story) => s.status === 'done');
             const columnsDiv = document.createElement('div');
             columnsDiv.className = 'stories-columns';
             columnsDiv.appendChild(await createStoryColumn('Do Zrobienia', todoStories, projectId));
-            columnsDiv.appendChild(await createStoryColumn('W Trakcie', doingStories, projectId));
-            columnsDiv.appendChild(await createStoryColumn('Ukończone', doneStories, projectId));
             storiesContainer.appendChild(columnsDiv);
         } catch (error) {
             console.error("Błąd w renderStories:", error);
@@ -236,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Renderuje tablicę Kanban z zadaniami dla danego projektu.
+    // Kanaban zadania
 
     async function renderKanbanBoard(projectId: string | null) {
         if (!kanbanBoard) return;
@@ -261,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Funkcja fabryczna tworząca pojedynczą kolumnę z kartami historyjek.
+    // Funkcja fabryczna tworząca pojedynczą kolumnę z kartami historyjek
 
     async function createStoryColumn(title: string, stories: Story[], projectId: string): Promise<HTMLElement> {
         const columnDiv = document.createElement('div');
@@ -298,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return columnDiv;
     }
 
-    // Funkcja fabryczna tworząca pojedynczą kolumnę dla tablicy Kanban.
+    // Funkcja fabryczna tworząca pojedynczą kolumnę dla tablicy Kanban
 
     async function createKanbanColumn(title: string, tasks: Task[], projectId: string): Promise<HTMLElement> {
         const columnDiv = document.createElement('div');
@@ -325,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return columnDiv;
     }
     
-    // Wczytuje dane projektu do formularza w celu edycji.
+    // Wczytuje dane projektu do formularza w celu edycji
 
     async function loadProjectForEditing(id: string) {
         const project = await apiService.getProjectById(id);
@@ -337,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Wczytuje dane historyjki do formularza w celu edycji.
+    // Wczytuje dane historyjki do formularza w celu edycji
 
     async function loadStoryForEditing(storyId: string) {
         const story = await apiService.getStoryById(storyId);
@@ -350,7 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Obsługuje logikę usuwania projektu.
+    // Logikę usuwania projektu
 
     function deleteProject(id: string, name: string) {
         showConfirmationModal(`Czy na pewno chcesz usunąć projekt "${name}"?`, async () => {
@@ -365,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Obsługuje logikę usuwania historyjki.
+    // Logikę usuwania historyjki
     
     function deleteStoryFromList(storyId: string, name: string) {
         showConfirmationModal(`Czy na pewno chcesz usunąć historyjkę "${name}"?`, async () => {
@@ -375,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
  
-    // Aktualizuje UI w zależności od stanu zalogowania użytkownika.
+    // Aktualizuje UI w zależności od stanu zalogowania użytkownika
     
     async function updateUIBasedOnAuthState(user: User | null) {
         try {
@@ -406,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // GŁÓWNE EVENT LISTENERY APLIKACJI
+    // EVENT LISTENERY APLIKACJI
     
     // Listenery dla Autentykacji
     showRegisterLink?.addEventListener('click', (e) => { e.preventDefault(); loginFormContainer.style.display = 'none'; registerFormContainer.style.display = 'block'; });
